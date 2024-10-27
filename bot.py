@@ -46,9 +46,9 @@ def get_headers(auth_code):
     return headers
 
 # Fungsi untuk membaca kode auth dari file
-def read_auth_code(file_path):
+def read_auth_codes(file_path):
     with open(file_path, 'r') as file:
-        return file.read().strip()
+        return [line.strip() for line in file.readlines()]
 
 # Fungsi untuk mendapatkan informasi pengguna
 def get_user_info(auth_code):
@@ -101,49 +101,52 @@ def get_spin_reward(auth_code):
 
 # Fungsi untuk menampilkan informasi penting
 def print_summary(spin_count, spin_value, reward_status):
-    print(Fore.YELLOW + f"=== Spin {spin_count} ===")
+    print(Fore.YELLOW + f"\n=== Spin {spin_count} ===")
     print(Fore.GREEN + f"[ASC] Nilai Spin: {spin_value}")
-    print(Fore.MAGENTA + f"[ASC] Hadiah Berhasil: {reward_status}\n")
+    print(Fore.MAGENTA + f"[ASC] Hadiah Berhasil: {reward_status}")
 
 # Fungsi untuk keluar dengan aman
 def safe_exit(signal, frame):
-    print(Fore.YELLOW + "\n\nTerima kasih telah menggunakan HanaFuda Auto Grow!")
-    print(Fore.CYAN + "          Telegram Channel: @airdropasc")
+    print(Fore.CYAN + "\n\nTerima kasih telah menggunakan HanaFuda Auto Grow!")
+    print(Fore.YELLOW + "Dari: Airdrop ASC | Telegram Channel: @airdropasc")
     sys.exit(0)
 
 # Main program
 def main():
     print_banner()
-    auth_code = read_auth_code('token.txt')
+    auth_codes = read_auth_codes('token.txt')  # Ganti dengan path file yang sesuai
     
+    # Menghubungkan sinyal CTRL+C ke fungsi safe_exit
     signal.signal(signal.SIGINT, safe_exit)
-    
-    # Mendapatkan informasi pengguna
-    user_info = get_user_info(auth_code)
-    
-    # Mendapatkan jumlah growActionCount
-    try:
-        grow_action_count = user_info['data']['getGardenForCurrentUser']['gardenStatus']['growActionCount']
-        print(Fore.CYAN + f"[ASC] Jumlah Grow Action Tersedia: {grow_action_count}\n")
-    except KeyError:
-        print(Fore.RED + "Gagal mendapatkan informasi jumlah Grow Action.")
-        return  # Keluar jika terjadi kesalahan
-    
-    # Melakukan spin sesuai jumlah growActionCount
-    for i in range(grow_action_count):
-        print(Fore.BLUE + f"=== Melakukan Spin {i + 1} dari {grow_action_count} ===\n")
+
+    for index, auth_code in enumerate(auth_codes, start=1):
+        print(Fore.YELLOW + f"Memproses Akun Ke-{index}")
         
-        # Melakukan spin dan mendapatkan hasilnya
-        spin_response = spin(auth_code)
-        spin_value = spin_response['data']['issueGrowAction']
-        reward_response = get_spin_reward(auth_code)
-        reward_status = reward_response['data']['commitGrowAction']
+        # Mendapatkan informasi pengguna
+        user_info = get_user_info(auth_code)
         
-        # Menampilkan ringkasan informasi spin
-        print_summary(i + 1, spin_value, reward_status)
+        # Mendapatkan jumlah growActionCount
+        try:
+            grow_action_count = user_info['data']['getGardenForCurrentUser']['gardenStatus']['growActionCount']
+            print(Fore.CYAN + f"[ASC] Jumlah Grow Action Tersedia: {grow_action_count}")
+        except KeyError:
+            print(Fore.RED + "Gagal mendapatkan informasi jumlah Grow Action.")
+            continue  # Lanjut ke akun berikutnya jika terjadi kesalahan
         
-        # Delay setelah setiap spin
-        time.sleep(2)
+        for i in range(grow_action_count):
+            print(Fore.BLUE + f"\n=== Melakukan Spin {i + 1} dari {grow_action_count} ===")
+            
+            # Melakukan spin dan mendapatkan hasilnya
+            spin_response = spin(auth_code)
+            spin_value = spin_response['data']['issueGrowAction']
+            reward_response = get_spin_reward(auth_code)
+            reward_status = reward_response['data']['commitGrowAction']
+            
+            # Menampilkan ringkasan informasi spin
+            print_summary(i + 1, spin_value, reward_status)
+            
+            # Delay setelah setiap spin
+            time.sleep(2)
 
 if __name__ == "__main__":
     main()
