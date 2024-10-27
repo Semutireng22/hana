@@ -111,11 +111,30 @@ def safe_exit(signal, frame):
     print(Fore.YELLOW + "Dari: Airdrop ASC | Telegram Channel: @airdropasc")
     sys.exit(0)
 
+# Fungsi untuk membaca konfigurasi dari file JSON
+def read_config(file_path):
+    with open(file_path, 'r') as f:
+        return json.load(f)
+
+# Fungsi untuk menunggu hingga jumlah minimal grow actions tercapai
+def wait_for_minimum_actions(auth_code, min_actions):
+    while True:
+        user_info = get_user_info(auth_code)
+        grow_action_count = user_info['data']['getGardenForCurrentUser']['gardenStatus']['growActionCount']
+        if grow_action_count >= min_actions:
+            print(Fore.GREEN + f"[ASC] Jumlah Grow Action mencukupi: {grow_action_count}")
+            break
+        else:
+            print(Fore.YELLOW + f"[ASC] Menunggu hingga jumlah Grow Action mencapai {min_actions}...")
+            time.sleep(10)  # Tunggu 10 detik sebelum memeriksa lagi
+
 # Main program
 def main():
     print_banner()
     auth_codes = read_auth_codes('token.txt')  # Ganti dengan path file yang sesuai
-    
+    config = read_config('config.json')
+    min_grow_actions = config.get('min_grow_actions', 5)
+
     # Menghubungkan sinyal CTRL+C ke fungsi safe_exit
     signal.signal(signal.SIGINT, safe_exit)
 
@@ -133,6 +152,13 @@ def main():
             print(Fore.RED + "Gagal mendapatkan informasi jumlah Grow Action.")
             continue  # Lanjut ke akun berikutnya jika terjadi kesalahan
         
+        # Jika jumlah Grow Action tersedia adalah nol, tunggu hingga mencapai jumlah minimal
+        if grow_action_count == 0:
+            wait_for_minimum_actions(auth_code, min_grow_actions)
+            user_info = get_user_info(auth_code)  # Dapatkan info pengguna lagi setelah menunggu
+            grow_action_count = user_info['data']['getGardenForCurrentUser']['gardenStatus']['growActionCount']
+
+        # Melakukan spin sesuai jumlah growActionCount
         for i in range(grow_action_count):
             print(Fore.BLUE + f"\n=== Melakukan Spin {i + 1} dari {grow_action_count} ===")
             
